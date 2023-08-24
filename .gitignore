@@ -6,3 +6,4 @@ backup
 lib
 *.lpi
 *.lps
+*.bak

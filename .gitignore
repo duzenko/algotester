@@ -1,0 +1,8 @@
+*.exe
+*.o
+fp___.err
+0001/fp___.out
+backup
+lib
+*.lpi
+*.lps

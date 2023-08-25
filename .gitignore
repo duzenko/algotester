@@ -7,3 +7,4 @@ lib
 *.lpi
 *.lps
 *.bak
+*.dbg

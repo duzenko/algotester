@@ -1,42 +1,39 @@
 program offices;
 {$mode objfpc}
 
-uses SysUtils, Math, Classes;
-
-type
-  	TCompanyData = record
-     	Id: Integer;
-      Density: Double;
-   end;
+uses SysUtils;
 
 var
-   Data: array of TCompanyData = nil;
-   Index: array of ^TCompanyData;
+   Density: array[0..100000] of Double;
+   Index: array[0..100000] of Integer;
 
-function Compare(const a, b: TCompanyData): Integer; inline;
+function Compare(a, b: Double): Single; inline;
 begin
-   Result := Integer(Single(b.Density-a.Density));
+   Result := b-a;
 end;
 
 Procedure QuickSort(L, R : Longint);
 var
-  I, J : Longint;
-  P, Q : ^TCompanyData;
+  I, J, Qi : Longint;
+  P, Q : Double;
 begin
  repeat
    I := L;
    J := R;
-   P := Index[ (L + R) div 2 ];
+   P := Density[ (L + R) div 2 ];
    repeat
-     while Compare(P^, Index[i]^) > 0 do
+     while Compare(P, Density[i]) > 0 do
        I := I + 1;
-     while Compare(P^, Index[J]^) < 0 do
+     while Compare(P, Density[J]) < 0 do
        J := J - 1;
      If I <= J then
      begin
-       Q := Index[I];
+       Qi := Index[I];
        Index[I] := Index[J];
-       Index[J] := Q;
+       Index[J] := Qi;
+       Q := Density[I];
+       Density[I] := Density[J];
+       Density[J] := Q;
        I := I + 1;
        J := J - 1;
      end;
@@ -59,23 +56,21 @@ end;
 procedure Solve;
 var
    i, x: Integer;
+   Sizes: array of Integer;
 begin
 	readln(x);
-   SetLength(Data, x);
-   SetLength(Index, x);
-   for i := 0 to High(Data) do begin
-      read(Data[i].Density);
-      Index[i] := @Data[i];
-      Data[i].Id := i+1;
+   SetLength(Sizes, x+1);
+   for i := 1 to High(Sizes) do begin
+      read(Sizes[i]);
+      Index[i] := i;
    end;
-   for i := 0 to High(Data) do begin
+   for i := 1 to High(Sizes) do begin
       read(x);
-      Data[i].Density := x / Data[i].Density;
+      Density[i] := x / Sizes[i];
    end;
-	QuickSort(0, High(Index));
-   for i := 0 to High(Index) do begin
-      x := TCompanyData(Index[i]^).Id;
-   	Write(x, ' ');
+	QuickSort(1, High(Sizes));
+   for i := 1 to High(Sizes) do begin
+   	Write(Index[i], ' ');
    end;
 end;
 

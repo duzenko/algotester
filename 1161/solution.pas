@@ -1,131 +1,145 @@
 program solution;
 {$mode delphi}
 
-uses SysUtils, Math, StrUtils, Classes, fgl;
+uses SysUtils, Math, StrUtils, Classes, fgl, gset;
 
 type
-   TSector = class;
+   { TSector }
+
+   TSector = record
+      NeighborCount: Integer;
+      Neighbors: array[0..7] of ^TSector;
+      Visited: Boolean;
+   end;
+   PSector = ^TSector;
+
+   TPoint = class;
+   TPointDescrip = record
+      s: String;
+      p: TPoint;
+   end;
 
    { TPoint }
 
-   TPoint = class
-      x, y, z: Single;
-      Sectors: TFPGList<TSector>;
+   TPoint = class(TFPGList<PSector>)
       constructor Create;
+      class function c(const L, R: TPointDescrip): Boolean; static;
    end;
 
-   { TSector }
-
-   TSector = class(TFPGList<TSector>)
-      Visited: Boolean;
-      constructor Create;
-   end;
-
+const
+   MaxN = 350000;
 var
-   Sectors: TFPGList<TSector>;
+   Sectors: array[0..MaxN] of TSector;
+   Verbose: Boolean;
 
-function VisitSector(const last: TArray<TSector>): TArray<TSector>;
+procedure VisitSector(last, next: TFPGList<PSector>);
 var
    l, n: Integer;
-   c: Integer;
 begin
-   c := 0;
-   SetLength(Result, 3*Length(last));
-   for l := 0 to High(last) do
-      for n  := 0 to last[l].Count-1 do
-         if not last[l][n].Visited then begin
-            last[l][n].Visited := True;
-            Result[c] := last[l][n];
-            Inc(c);
+   next.Count := 0;
+   for l := 0 to last.Count-1 do
+      for n  := 0 to last[l].NeighborCount-1 do
+         if not last[l].Neighbors[n].Visited then begin
+            last[l].Neighbors[n].Visited := True;
+            next.Add(last[l].Neighbors[n]);
          end;
-   SetLength(Result, c);
 end;
 
 procedure Solve;
 var
+   Index2: TSet<TPointDescrip, TPoint>;
    a, b, i, j, l, n: Integer;
-   s, s1, s2: TSector;
+   s, s1: PSector;
    p1, p2: TPoint;
-   Visited: TArray<TSector>;
-   Data: array of String;
-   Index: TStringList;
-   st: String;
-   x, y, z: Extended;
    Points: array[0..2] of TPoint;
+   dt: TDateTime;
+   visit1, visit2: TFPGList<PSector>;
+   pd: TPointDescrip;
+   node: Index2.PNode;
 begin
-	ReadLn(n);
-	ReadLn(a, b);
-   Index := TStringList.Create;
-   Index.Capacity := 3*n;
-   Index.CaseSensitive := true;
-   SetLength(Data, 3*n);
-   for i := 0 to n-1 do begin
-      for j := 0 to 2 do begin
-         ReadLn(st);
-         Data[Index.Count] := st;
-         Index.Add(st);
-      end;
+   dt := Now;
+   Index2 := TSet<TPointDescrip, TPoint>.Create;
+   if not Verbose then begin
+      ReadLn(n);
+      ReadLn(a, b);
+   end else begin
+      n := MaxN;
+      a := 1;
+      b := n;
    end;
-   Index.Sorted := True;
+   if Verbose then WriteLn(FormatDateTime('ss.zzz', Now-dt));
    for i := 0 to n-1 do begin;
-      s := TSector.Create;
-      Sectors.Add(s);
+      s := @Sectors[i];
       for j := 0 to 2 do begin
-         l := Index.IndexOf(Data[i*3+j]);
-         if Index.Objects[l] = Nil then begin
+         if Verbose then
+            pd.s := Format('%d %d %d', [(i mod 32 + j) div 2, i div 32 + (i+j) mod 2, 0])
+         else
+            ReadLn(pd.s);
+         node := Index2.NFind(pd);
+         if node = nil then begin
             p1 := TPoint.Create;
-            Index.Objects[l] := p1;
-            st := Index[l];
-            SScanf(st, '%f %f %f', [@x, @y, @z]);
-            p1.x := x;
-            p1.y := y;
-            p1.z := z;
+            pd.p := p1;
+            Index2.Insert(pd);
+         end else begin
+            p1 := node.Data.p;
          end;
-         p1 := TPoint(Index.Objects[l]);
-         p1.Sectors.Add(s);
+         p1.Add(s);
          Points[j] := p1;
       end;
       for p1 in Points do begin
          for p2 in Points do begin
             if p1 <> p2 then
-               for s1 in p1.Sectors do
-                  for s2 in p2.Sectors do
-                     if (s1 = s2) and (s1 <> s) then begin
-                        s1.Add(s);
-                        s.Add(s1);
+               for l := 0 to p1.Count-1 do begin
+                  s1 := p1[l];
+                  for j := 0 to p2.Count-1 do begin
+                     if (s1 = p2[j]) and (s1 <> s) then begin
+                        if s1.NeighborCount = High(s1.Neighbors) then
+                           raise Exception.Create('');
+                        if s.NeighborCount = High(s.Neighbors) then
+                           raise Exception.Create('');
+                        s1.Neighbors[s1.NeighborCount] := s;
+                        s1.NeighborCount += 1;
+                        s.Neighbors[s.NeighborCount] := s1;
+                        s.NeighborCount += 1;
                      end;
+                  end;
+               end;
          end;
       end;
    end;
+   if Verbose then WriteLn(FormatDateTime('ss.zzz', Now-dt));
    l := 0;
-   SetLength(Visited, 1);
-   Visited[0] := Sectors[a-1];
+   visit1 := TFPGList<PSector>.Create;
+   visit2 := TFPGList<PSector>.Create;
+   visit1.Add(@Sectors[a-1]);
    repeat
-      for s in Visited do
-         if s = Sectors[b-1] then begin
+      for s in visit1 do
+         if s = @Sectors[b-1] then begin
+            if Verbose then WriteLn(FormatDateTime('ss.zzz', Now-dt));
             WriteLn(l);
             Exit;
          end;
-      Visited := VisitSector(Visited);
+      VisitSector(visit1, visit2);
       Inc(l);
-   until Length(Visited) = 0;
+      visit2 := InterlockedExchange(Pointer(visit1), visit2);
+   until visit2.Count = 0;
    WriteLn(-1);
 end;
 
-constructor TSector.Create;
+constructor TPoint.Create;
 begin
    inherited Create;
-   Capacity := 4;
+   Capacity := 8;
+end;
+
+class function TPoint.c(const L, R: TPointDescrip): Boolean;
+begin
+   Result := CompareStr(L.s, R.s) < 0;
 end;
 
 { TPoint }
 
-constructor TPoint.Create;
 begin
-   Sectors := TFPGList<TSector>.Create;
-end;
-
-begin
-   Sectors := TFPGList<TSector>.Create;
+   Verbose := ParamCount > 0;
    Solve;
 end.

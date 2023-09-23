@@ -12,8 +12,10 @@ type
 
    TGroup = class(TFPGList<PPoint>)
      InternalGap: Double;
-     function DistanceTo(p: PPoint): Double; overload;
-     function DistanceTo(Group: TGroup): Double; overload;
+     function DistanceTo(p: PPoint): Double; overload; inline;
+     function Distance2To(p: PPoint): Double; overload;
+     function DistanceTo(Group: TGroup): Double; overload; inline;
+     function Distance2To(Group: TGroup): Double; overload;
      function DistanceToLeft: Double;
      function DistanceToRight: Double;
    end;
@@ -24,15 +26,9 @@ var
    All: TGroup;
    Verbose: Boolean;
 
-function Distance(p1, p2: PPoint): Double;
+function Distance2(p1, p2: PPoint): Double; inline;
 begin
-  if (p1 = Nil) and (p2 = Nil) then
-     Exit(xr-xl+2*r);
-  if (p1 = Nil) then
-     Exit(p2.x-xl+r);
-  if (p2 = Nil) then
-     Exit(xr-p1.x+r);
-   Result := Sqrt(Sqr(p1.x-p2.x)+Sqr(p1.y-p2.y));
+   Result := Sqr(p1.x-p2.x)+Sqr(p1.y-p2.y);
 end;
 
 procedure Solve;
@@ -58,16 +54,19 @@ begin
       Groups.Last.Add(p);
    end;
    while Groups.Count > 1 do begin
-      d := MaxSingle;
-      for g1 in Groups do
+      d := MaxDouble;
+      for g1 in Groups do begin
          for g2 in Groups do begin
             if g1 = g2 then Continue;
-            d2 := g1.DistanceTo(g2);
+            d2 := g1.Distance2To(g2);
             if d2 >= d then Continue;
             d := d2;
             Group := g1;
             g := g2;
+            Break;
          end;
+         //Break;
+      end;
       d1 := Max(Group.InternalGap, Max(Group.DistanceToLeft, Group.DistanceToRight));
       d2 := Max(g.InternalGap, Max(g.DistanceToLeft, g.DistanceToRight));
       d := Group.DistanceTo(g) - r;
@@ -90,21 +89,32 @@ var
    i: Integer;
 
 function TGroup.DistanceTo(p: PPoint): Double;
+begin
+   Result := Sqrt(Distance2To(p));
+end;
+
+function TGroup.Distance2To(p: PPoint): Double;
 var
    i: PPoint;
 begin
    Result := MaxSingle;
    for i in Self do
-      Result := Min(Result, Distance(p, i));
+      Result := Min(Result, Distance2(p, i));
 end;
 
 function TGroup.DistanceTo(Group: TGroup): Double;
+begin
+   Result := Sqrt(Distance2To(Group));
+end;
+
+function TGroup.Distance2To(Group: TGroup): Double;
 var
    i: PPoint;
 begin
    Result := MaxSingle;
    for i in Self do
-      Result := Min(Result, Group.DistanceTo(i));
+      Result := Min(Result, Group.Distance2To(i));
+
 end;
 
 function TGroup.DistanceToLeft: Double;
